@@ -19,7 +19,7 @@ export const handler = async (event: EventBridgeEvent<string, string>) => {
     await snsClient.send(new PublishCommand({
         TopicArn: topicArn,
         Subject: "Deleted Element",
-        Message: "Deleted Element which lasted for" + JSON.stringify(deleteTime - isoTime)
+        Message: "Deleted Element which lasted for " + JSON.stringify(deleteTime - isoTime) + " time"
     }))
 
     await ddb.send(new DeleteItemCommand({
