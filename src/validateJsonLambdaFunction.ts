@@ -13,7 +13,8 @@ export const handler = async (event: APIGatewayProxyEvent) => {
     console.log(JSON.stringify(event));
     const tableName = process.env.TABLE_NAME;
 
-    const { valid, value, description, buyer } = JSON.parse(event.body!);
+    const { valid, value, description, buyer, timestamp, body } = JSON.parse(event.body!);
+    const isoTime = new Date().toISOString();
 
     if (valid){
         const snsTopic = process.env.SNS_TOPIC;
@@ -45,19 +46,24 @@ export const handler = async (event: APIGatewayProxyEvent) => {
                 },
                 buyer: {
                     S: buyer
+                },
+                timestamp: {
+                    S: JSON.stringify(isoTime)
                 }
             }
         }))
 
-
-        const isoTime = new Date().toISOString();
+        const deleteTime = new Date(isoTime + 24*60*60*1000).toISOString();
 
         const result = await schedulerClient.send(new CreateScheduleCommand({
             Name: `Validate-${jsonUuid}`,
-            ScheduleExpression: `at(${isoTime})`,
+            ScheduleExpression: `at(${deleteTime})`,
             Target: {
                 Arn: `arn:aws:lambda:${this.region}:${this.account}:function:deleteElementLambdaFunction`,
-                Input: JSON.stringify(jsonUuid, valid, value),
+                Input: JSON.stringify({
+                    PK: `JSON#${jsonUuid}`,
+                    SK: `METADATA#${jsonUuid}`
+                }),
                 RoleArn: `arn:aws:iam::${this.account}:role/SchedulerInvocationRole`
             },
             FlexibleTimeWindow: {
